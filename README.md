@@ -258,3 +258,25 @@ When contributing:
 ## License
 
 MIT License
+
+
+## Development Commands (Current Scaffold)
+
+```bash
+# Install all workspaces
+pnpm install
+
+# Start listener
+pnpm --filter @rwa-monitor/listener dev
+
+# Start API
+pnpm --filter @rwa-monitor/api dev
+```
+
+## Environment
+
+Create a local environment file from the template:
+
+```bash
+cp .env.example .env
+```
