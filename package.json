@@ -1,0 +1,17 @@
+{
+  "name": "multichain-rwa-ai-agent-monitor",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10",
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "security": "turbo run security"
+  },
+  "devDependencies": {
+    "turbo": "^2.1.0"
+  }
+}

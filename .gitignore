@@ -1,0 +1,26 @@
+node_modules
+.pnpm-store
+.env
+.env.*
+.DS_Store
+coverage
+dist
+.next
+out
+.cache
+.turbo
+
+# Foundry
+contracts/cache
+contracts/out
+
+# Logs
+*.log
+
+# SQLite
+*.sqlite
+*.db
+
+# IDE
+.vscode
+.idea
