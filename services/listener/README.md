@@ -6,8 +6,16 @@ Multi-chain event listener for RWAMonitor contracts.
 - Subscribe to canonical RWAMonitor events on 5 chains
 - Normalize event payloads into a shared schema
 - Score events through AI risk pipeline (schema-validated)
-- Trigger Telegram alerts based on severity thresholds
 - Persist canonical events + risk signals to SQLite
+- Publish alert jobs into `alert_outbox` (service contract for alerter)
+
+## Cross-service contract
+Listener writes queued alert jobs to SQLite table:
+- Table: `alert_outbox`
+- PK: `(event_id, channel)`
+- Status flow: `pending -> processing -> sent|failed`
+
+Alerter service consumes from this table and handles Telegram delivery.
 
 ## Start (development)
 

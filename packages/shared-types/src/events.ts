@@ -36,3 +36,18 @@ export interface RiskSignal {
   reasoning: string;
   createdAt: string;
 }
+
+export type AlertChannel = "telegram";
+
+export type AlertOutboxStatus = "pending" | "processing" | "sent" | "failed";
+
+export interface AlertOutboxJob {
+  eventId: string;
+  channel: AlertChannel;
+  status: AlertOutboxStatus;
+  attempts: number;
+  lastError?: string;
+  nextRetryAt: string;
+  createdAt: string;
+  updatedAt: string;
+}

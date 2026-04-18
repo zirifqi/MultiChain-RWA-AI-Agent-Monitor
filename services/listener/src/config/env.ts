@@ -6,13 +6,6 @@ const envSchema = z.object({
   SQLITE_PATH: z.string().default("./data/rwa-monitor.db"),
   POLL_INTERVAL_MS: z.coerce.number().default(5000),
 
-  TELEGRAM_ALERTS_ENABLED: z.coerce.boolean().default(false),
-  TELEGRAM_BOT_TOKEN: z.string().optional(),
-  TELEGRAM_CHAT_ID: z.string().optional(),
-  ALERT_INFO_MIN_SCORE: z.coerce.number().min(0).max(100).default(95),
-  ALERT_WARNING_MIN_SCORE: z.coerce.number().min(0).max(100).default(60),
-  ALERT_CRITICAL_MIN_SCORE: z.coerce.number().min(0).max(100).default(75),
-
   ETHEREUM_WS_URL: z.string().min(1),
   ETHEREUM_RPC_URL: z.string().min(1),
   ETHEREUM_MONITOR_ADDRESS: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
@@ -37,23 +30,9 @@ const envSchema = z.object({
 export function loadConfig(): ListenerConfig {
   const env = envSchema.parse(process.env);
 
-  if (env.TELEGRAM_ALERTS_ENABLED && (!env.TELEGRAM_BOT_TOKEN || !env.TELEGRAM_CHAT_ID)) {
-    throw new Error("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID are required when TELEGRAM_ALERTS_ENABLED=true");
-  }
-
   return {
     sqlitePath: env.SQLITE_PATH,
     pollIntervalMs: env.POLL_INTERVAL_MS,
-    telegramAlerts: {
-      enabled: env.TELEGRAM_ALERTS_ENABLED,
-      botToken: env.TELEGRAM_BOT_TOKEN,
-      chatId: env.TELEGRAM_CHAT_ID,
-      severityThresholds: {
-        info: env.ALERT_INFO_MIN_SCORE,
-        warning: env.ALERT_WARNING_MIN_SCORE,
-        critical: env.ALERT_CRITICAL_MIN_SCORE
-      }
-    },
     chains: [
       {
         chain: "ethereum",

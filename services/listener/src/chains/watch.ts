@@ -6,7 +6,6 @@ import { rwaMonitorAbi } from "../../../../contracts/codegen/rwaMonitorAbi";
 import type { ChainConfig } from "../types/config";
 import { toCanonicalEvent } from "../ingestion/normalize";
 import { ListenerStore } from "../db/sqlite";
-import { TelegramAlerter } from "../alerts/telegram";
 
 const WATCHED_EVENTS: CanonicalEventType[] = [
   "NAVUpdated",
@@ -29,11 +28,7 @@ function eventAbiItem(name: CanonicalEventType): AbiEvent {
   return abiItem;
 }
 
-export function startChainWatchers(
-  chains: ChainConfig[],
-  store: ListenerStore,
-  alerter?: TelegramAlerter
-): Array<() => void> {
+export function startChainWatchers(chains: ChainConfig[], store: ListenerStore): Array<() => void> {
   const unwatchers: Array<() => void> = [];
 
   for (const chainCfg of chains) {
@@ -62,17 +57,7 @@ export function startChainWatchers(
             try {
               const riskSignal = scoreCanonicalEvent(canonical);
               store.saveRiskSignal(riskSignal);
-
-              if (alerter) {
-                try {
-                  const sent = await alerter.send(canonical, riskSignal);
-                  if (sent) {
-                    console.log(`[listener] telegram alert sent for ${canonical.id}`);
-                  }
-                } catch (alertError) {
-                  console.error(`[listener] telegram alert failed for ${canonical.id}:`, alertError);
-                }
-              }
+              store.enqueueTelegramAlert(canonical.id);
 
               console.log(
                 `[listener] ${canonical.chain} ${canonical.type} ${canonical.txHash} | risk=${riskSignal.riskScore.toFixed(1)} conf=${riskSignal.confidence.toFixed(2)}`

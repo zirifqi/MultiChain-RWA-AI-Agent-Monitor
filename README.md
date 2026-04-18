@@ -269,6 +269,9 @@ pnpm install
 # Start listener
 pnpm --filter @rwa-monitor/listener dev
 
+# Start alerter
+pnpm --filter @rwa-monitor/alerter dev
+
 # Start API
 pnpm --filter @rwa-monitor/api dev
 ```

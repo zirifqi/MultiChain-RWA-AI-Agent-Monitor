@@ -1,0 +1,113 @@
+import fs from "node:fs";
+import path from "node:path";
+import Database from "better-sqlite3";
+import type { AlertCandidate, AlerterConfig } from "./types";
+
+export class AlerterStore {
+  private db: Database.Database;
+
+  constructor(filePath: string) {
+    const dir = path.dirname(filePath);
+    fs.mkdirSync(dir, { recursive: true });
+    this.db = new Database(filePath);
+  }
+
+  fetchDueTelegramCandidates(limit: number): AlertCandidate[] {
+    const now = new Date().toISOString();
+
+    const rows = this.db
+      .prepare(
+        `
+        SELECT
+          ao.event_id,
+          ao.channel,
+          ao.attempts,
+          ce.chain,
+          ce.asset_id,
+          ce.event_type,
+          ce.severity,
+          ce.tx_hash,
+          ce.observed_at,
+          rs.risk_score,
+          rs.confidence,
+          rs.recommendation,
+          rs.reasoning
+        FROM alert_outbox ao
+        JOIN canonical_events ce ON ce.id = ao.event_id
+        JOIN risk_signals rs ON rs.event_id = ao.event_id
+        WHERE ao.channel = 'telegram'
+          AND ao.status IN ('pending', 'failed')
+          AND ao.next_retry_at <= ?
+        ORDER BY ao.created_at ASC
+        LIMIT ?
+      `
+      )
+      .all(now, limit) as any[];
+
+    return rows.map((row) => ({
+      eventId: row.event_id,
+      channel: row.channel,
+      attempts: Number(row.attempts),
+      chain: row.chain,
+      assetId: row.asset_id,
+      type: row.event_type,
+      severity: row.severity,
+      txHash: row.tx_hash,
+      riskScore: Number(row.risk_score),
+      confidence: Number(row.confidence),
+      recommendation: row.recommendation,
+      reasoning: row.reasoning,
+      observedAt: row.observed_at
+    }));
+  }
+
+  markProcessing(eventId: string): void {
+    const now = new Date().toISOString();
+    this.db
+      .prepare(
+        `
+        UPDATE alert_outbox
+        SET status = 'processing', updated_at = ?
+        WHERE event_id = ? AND channel = 'telegram'
+      `
+      )
+      .run(now, eventId);
+  }
+
+  markSent(eventId: string): void {
+    const now = new Date().toISOString();
+    this.db
+      .prepare(
+        `
+        UPDATE alert_outbox
+        SET status = 'sent', updated_at = ?, last_error = NULL
+        WHERE event_id = ? AND channel = 'telegram'
+      `
+      )
+      .run(now, eventId);
+  }
+
+  markFailed(eventId: string, errorMessage: string, attempts: number): void {
+    const now = new Date().toISOString();
+    const backoffSeconds = Math.min(300, Math.max(10, attempts * 10));
+    const nextRetryAt = new Date(Date.now() + backoffSeconds * 1000).toISOString();
+
+    this.db
+      .prepare(
+        `
+        UPDATE alert_outbox
+        SET status = 'failed',
+            attempts = attempts + 1,
+            last_error = ?,
+            next_retry_at = ?,
+            updated_at = ?
+        WHERE event_id = ? AND channel = 'telegram'
+      `
+      )
+      .run(errorMessage.slice(0, 1000), nextRetryAt, now, eventId);
+  }
+
+  meetsThreshold(candidate: AlertCandidate, thresholds: AlerterConfig["severityThresholds"]): boolean {
+    return candidate.riskScore >= thresholds[candidate.severity];
+  }
+}

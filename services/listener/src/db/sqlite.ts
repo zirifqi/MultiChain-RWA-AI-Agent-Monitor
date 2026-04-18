@@ -45,6 +45,21 @@ export class ListenerStore {
 
       CREATE INDEX IF NOT EXISTS idx_risk_created_at ON risk_signals(created_at DESC);
       CREATE INDEX IF NOT EXISTS idx_risk_score ON risk_signals(risk_score DESC);
+
+      CREATE TABLE IF NOT EXISTS alert_outbox (
+        event_id TEXT NOT NULL,
+        channel TEXT NOT NULL,
+        status TEXT NOT NULL,
+        attempts INTEGER NOT NULL DEFAULT 0,
+        last_error TEXT,
+        next_retry_at TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        PRIMARY KEY (event_id, channel),
+        FOREIGN KEY(event_id) REFERENCES canonical_events(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_alert_outbox_status_retry ON alert_outbox(status, next_retry_at);
     `);
   }
 
@@ -88,5 +103,17 @@ export class ListenerStore {
       signal.reasoning,
       signal.createdAt
     );
+  }
+
+  enqueueTelegramAlert(eventId: string): void {
+    const now = new Date().toISOString();
+
+    const stmt = this.db.prepare(`
+      INSERT OR IGNORE INTO alert_outbox (
+        event_id, channel, status, attempts, last_error, next_retry_at, created_at, updated_at
+      ) VALUES (?, 'telegram', 'pending', 0, NULL, ?, ?, ?)
+    `);
+
+    stmt.run(eventId, now, now, now);
   }
 }
