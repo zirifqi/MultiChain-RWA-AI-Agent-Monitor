@@ -48,7 +48,7 @@ export class ListenerStore {
     `);
   }
 
-  saveEvent(event: CanonicalEvent): void {
+  saveEvent(event: CanonicalEvent): boolean {
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO canonical_events (
         id, chain, contract_address, tx_hash, block_number, log_index,
@@ -56,7 +56,7 @@ export class ListenerStore {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(
+    const result = stmt.run(
       event.id,
       event.chain,
       event.contractAddress,
@@ -69,6 +69,8 @@ export class ListenerStore {
       event.severity,
       event.observedAt
     );
+
+    return result.changes > 0;
   }
 
   saveRiskSignal(signal: RiskSignal): void {

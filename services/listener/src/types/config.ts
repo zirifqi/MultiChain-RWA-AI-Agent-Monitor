@@ -7,8 +7,20 @@ export interface ChainConfig {
   monitorAddress: `0x${string}`;
 }
 
+export interface TelegramAlertConfig {
+  enabled: boolean;
+  botToken?: string;
+  chatId?: string;
+  severityThresholds: {
+    info: number;
+    warning: number;
+    critical: number;
+  };
+}
+
 export interface ListenerConfig {
   sqlitePath: string;
   pollIntervalMs: number;
   chains: ChainConfig[];
+  telegramAlerts: TelegramAlertConfig;
 }
