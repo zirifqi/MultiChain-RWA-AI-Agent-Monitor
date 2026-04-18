@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
-import type { CanonicalEvent } from "@rwa-monitor/shared-types";
+import type { CanonicalEvent, RiskSignal } from "@rwa-monitor/shared-types";
 
 export class ListenerStore {
   private db: Database.Database;
@@ -32,6 +32,19 @@ export class ListenerStore {
       CREATE INDEX IF NOT EXISTS idx_events_observed_at ON canonical_events(observed_at DESC);
       CREATE INDEX IF NOT EXISTS idx_events_chain ON canonical_events(chain);
       CREATE INDEX IF NOT EXISTS idx_events_type ON canonical_events(event_type);
+
+      CREATE TABLE IF NOT EXISTS risk_signals (
+        event_id TEXT PRIMARY KEY,
+        risk_score REAL NOT NULL,
+        confidence REAL NOT NULL,
+        recommendation TEXT NOT NULL,
+        reasoning TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY(event_id) REFERENCES canonical_events(id)
+      );
+
+      CREATE INDEX IF NOT EXISTS idx_risk_created_at ON risk_signals(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_risk_score ON risk_signals(risk_score DESC);
     `);
   }
 
@@ -55,6 +68,23 @@ export class ListenerStore {
       JSON.stringify(event.payload),
       event.severity,
       event.observedAt
+    );
+  }
+
+  saveRiskSignal(signal: RiskSignal): void {
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO risk_signals (
+        event_id, risk_score, confidence, recommendation, reasoning, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    stmt.run(
+      signal.eventId,
+      signal.riskScore,
+      signal.confidence,
+      signal.recommendation,
+      signal.reasoning,
+      signal.createdAt
     );
   }
 }

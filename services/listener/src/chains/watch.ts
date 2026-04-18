@@ -1,6 +1,7 @@
 import type { AbiEvent, PublicClient } from "viem";
 import { createPublicClient, getAbiItem, webSocket } from "viem";
 import type { CanonicalEventType, SupportedChain } from "@rwa-monitor/shared-types";
+import { scoreCanonicalEvent } from "@rwa-monitor/ai-engine";
 import { rwaMonitorAbi } from "../../../../contracts/codegen/rwaMonitorAbi";
 import type { ChainConfig } from "../types/config";
 import { toCanonicalEvent } from "../ingestion/normalize";
@@ -51,7 +52,17 @@ export function startChainWatchers(chains: ChainConfig[], store: ListenerStore):
             });
 
             store.saveEvent(canonical);
-            console.log(`[listener] ${canonical.chain} ${canonical.type} ${canonical.txHash}`);
+
+            try {
+              const riskSignal = scoreCanonicalEvent(canonical);
+              store.saveRiskSignal(riskSignal);
+
+              console.log(
+                `[listener] ${canonical.chain} ${canonical.type} ${canonical.txHash} | risk=${riskSignal.riskScore.toFixed(1)} conf=${riskSignal.confidence.toFixed(2)}`
+              );
+            } catch (error) {
+              console.error(`[listener] scoring pipeline failed for ${canonical.id}:`, error);
+            }
           }
         },
         onError: (error) => {
