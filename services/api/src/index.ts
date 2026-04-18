@@ -3,6 +3,7 @@ import Fastify from "fastify";
 import { createDb } from "./db/sqlite";
 import { registerHealthRoutes } from "./routes/health";
 import { registerEventRoutes } from "./routes/events";
+import { registerSignalRoutes } from "./routes/signals";
 
 async function main(): Promise<void> {
   const app = Fastify({ logger: true });
@@ -15,6 +16,7 @@ async function main(): Promise<void> {
 
   await registerHealthRoutes(app);
   await registerEventRoutes(app, db);
+  await registerSignalRoutes(app, db);
 
   await app.listen({ port, host });
   app.log.info(`API listening on http://${host}:${port}`);
