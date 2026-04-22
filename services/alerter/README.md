@@ -37,3 +37,22 @@ Input queue table produced by listener:
 ```bash
 pnpm --filter @rwa-monitor/alerter dev
 ```
+
+## Policy tests (manual baseline)
+
+Test files:
+- `services/alerter/test/test1-threshold-gating.test.mjs`
+- `services/alerter/test/test2-cooldown-dedupe.test.mjs`
+- `services/alerter/test/test3-escalation.test.mjs`
+- `services/alerter/test/test4-retry-backoff.test.mjs`
+
+Run:
+
+```bash
+node --test services/alerter/test/*.test.mjs
+```
+
+Latest result:
+- tests: **4**
+- pass: **4**
+- fail: **0**

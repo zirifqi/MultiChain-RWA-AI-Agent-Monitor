@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 import type { AlertCandidate, AlerterConfig } from "./types";
+import { meetsSeverityThreshold } from "./policy";
 
 export class AlerterStore {
   private db: Database.Database;
@@ -108,7 +109,7 @@ export class AlerterStore {
   }
 
   meetsThreshold(candidate: AlertCandidate, thresholds: AlerterConfig["severityThresholds"]): boolean {
-    return candidate.riskScore >= thresholds[candidate.severity];
+    return meetsSeverityThreshold(candidate.severity, candidate.riskScore, thresholds);
   }
 
   hasRecentSentDuplicate(candidate: AlertCandidate, cooldownSeconds: number): boolean {
