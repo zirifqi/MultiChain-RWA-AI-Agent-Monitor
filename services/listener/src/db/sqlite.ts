@@ -13,6 +13,13 @@ export class ListenerStore {
     this.bootstrap();
   }
 
+  private ensureColumn(table: string, column: string, ddl: string): void {
+    const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === column)) {
+      this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    }
+  }
+
   private bootstrap() {
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS canonical_events (
@@ -55,12 +62,17 @@ export class ListenerStore {
         next_retry_at TEXT NOT NULL,
         created_at TEXT NOT NULL,
         updated_at TEXT NOT NULL,
+        decision_code TEXT,
+        decision_note TEXT,
         PRIMARY KEY (event_id, channel),
         FOREIGN KEY(event_id) REFERENCES canonical_events(id)
       );
 
       CREATE INDEX IF NOT EXISTS idx_alert_outbox_status_retry ON alert_outbox(status, next_retry_at);
     `);
+
+    this.ensureColumn("alert_outbox", "decision_code", "decision_code TEXT");
+    this.ensureColumn("alert_outbox", "decision_note", "decision_note TEXT");
   }
 
   saveEvent(event: CanonicalEvent): boolean {
@@ -110,8 +122,8 @@ export class ListenerStore {
 
     const stmt = this.db.prepare(`
       INSERT OR IGNORE INTO alert_outbox (
-        event_id, channel, status, attempts, last_error, next_retry_at, created_at, updated_at
-      ) VALUES (?, 'telegram', 'pending', 0, NULL, ?, ?, ?)
+        event_id, channel, status, attempts, last_error, next_retry_at, created_at, updated_at, decision_code, decision_note
+      ) VALUES (?, 'telegram', 'pending', 0, NULL, ?, ?, ?, 'queued_for_delivery', 'Event queued by listener')
     `);
 
     stmt.run(eventId, now, now, now);

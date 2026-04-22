@@ -18,13 +18,13 @@ async function tick(): Promise<void> {
     const escalated = recentSameTypeCount + 1 >= config.policy.escalationRepeatCount;
 
     if (!store.meetsThreshold(candidate, config.severityThresholds) && !escalated) {
-      store.markSent(candidate.eventId);
+      store.markSent(candidate.eventId, "suppressed_below_threshold", "Risk score below severity threshold");
       continue;
     }
 
     const isDuplicateWithinCooldown = store.hasRecentSentDuplicate(candidate, config.policy.cooldownSeconds);
     if (isDuplicateWithinCooldown && !escalated) {
-      store.markSent(candidate.eventId);
+      store.markSent(candidate.eventId, "suppressed_cooldown_duplicate", "Suppressed duplicate alert within cooldown window");
       console.log(`[alerter] duplicate suppressed by cooldown for ${candidate.eventId}`);
       continue;
     }
@@ -37,7 +37,11 @@ async function tick(): Promise<void> {
       }
 
       await telegram.send(candidate);
-      store.markSent(candidate.eventId);
+      store.markSent(
+        candidate.eventId,
+        escalated ? "sent_escalated_override" : "sent_threshold_met",
+        escalated ? "Escalated override delivery due to repeated incidents" : "Delivered because threshold was met"
+      );
       console.log(`[alerter] telegram sent for ${candidate.eventId}${escalated ? " (escalated)" : ""}`);
     } catch (error: any) {
       store.markFailed(candidate.eventId, String(error?.message ?? error), candidate.attempts + 1);

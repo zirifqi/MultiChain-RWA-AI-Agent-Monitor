@@ -12,6 +12,7 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
       severity?: string;
       minAttempts?: string;
       maxAttempts?: string;
+      decisionCode?: string;
     };
 
     const limitRaw = Number(query.limit ?? 50);
@@ -45,6 +46,11 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
       values.push(query.severity);
     }
 
+    if (query.decisionCode) {
+      where.push("ao.decision_code = ?");
+      values.push(query.decisionCode);
+    }
+
     if (query.minAttempts !== undefined) {
       const minAttempts = Number(query.minAttempts);
       if (Number.isFinite(minAttempts)) {
@@ -73,6 +79,8 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
         ao.next_retry_at,
         ao.created_at,
         ao.updated_at,
+        ao.decision_code,
+        ao.decision_note,
         ce.chain,
         ce.asset_id,
         ce.event_type,
@@ -103,6 +111,10 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
       nextRetryAt: row.next_retry_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      decision: {
+        code: row.decision_code,
+        note: row.decision_note
+      },
       event: row.chain
         ? {
             chain: row.chain,
@@ -141,6 +153,8 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
           ao.next_retry_at,
           ao.created_at,
           ao.updated_at,
+          ao.decision_code,
+          ao.decision_note,
           ce.id,
           ce.chain,
           ce.contract_address,
@@ -181,6 +195,10 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
       nextRetryAt: row.next_retry_at,
       createdAt: row.created_at,
       updatedAt: row.updated_at,
+      decision: {
+        code: row.decision_code,
+        note: row.decision_note
+      },
       event: row.id
         ? {
             id: row.id,

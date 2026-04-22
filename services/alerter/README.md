@@ -32,6 +32,16 @@ Input queue table produced by listener:
 - **Cooldown dedupe:** suppresses duplicate alerts (same asset+type+severity) within cooldown
 - **Escalation override:** repeated same asset+type alerts within escalation window can bypass suppression and send as escalated
 
+## Decision codes (audit trail)
+Stored in `alert_outbox.decision_code` + `decision_note`:
+- `queued_for_delivery`
+- `dispatching`
+- `suppressed_below_threshold`
+- `suppressed_cooldown_duplicate`
+- `sent_threshold_met`
+- `sent_escalated_override`
+- `delivery_failed`
+
 ## Start (development)
 
 ```bash

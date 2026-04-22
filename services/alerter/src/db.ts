@@ -11,6 +11,19 @@ export class AlerterStore {
     const dir = path.dirname(filePath);
     fs.mkdirSync(dir, { recursive: true });
     this.db = new Database(filePath);
+    this.ensureSchema();
+  }
+
+  private ensureColumn(table: string, column: string, ddl: string): void {
+    const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === column)) {
+      this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    }
+  }
+
+  private ensureSchema(): void {
+    this.ensureColumn("alert_outbox", "decision_code", "decision_code TEXT");
+    this.ensureColumn("alert_outbox", "decision_note", "decision_note TEXT");
   }
 
   fetchDueTelegramCandidates(limit: number): AlertCandidate[] {
@@ -68,24 +81,31 @@ export class AlerterStore {
       .prepare(
         `
         UPDATE alert_outbox
-        SET status = 'processing', updated_at = ?
+        SET status = 'processing',
+            updated_at = ?,
+            decision_code = 'dispatching',
+            decision_note = 'Alerter is dispatching delivery attempt'
         WHERE event_id = ? AND channel = 'telegram'
       `
       )
       .run(now, eventId);
   }
 
-  markSent(eventId: string): void {
+  markSent(eventId: string, decisionCode = "sent", decisionNote = "Delivered successfully"): void {
     const now = new Date().toISOString();
     this.db
       .prepare(
         `
         UPDATE alert_outbox
-        SET status = 'sent', updated_at = ?, last_error = NULL
+        SET status = 'sent',
+            updated_at = ?,
+            last_error = NULL,
+            decision_code = ?,
+            decision_note = ?
         WHERE event_id = ? AND channel = 'telegram'
       `
       )
-      .run(now, eventId);
+      .run(now, decisionCode, decisionNote, eventId);
   }
 
   markFailed(eventId: string, errorMessage: string, attempts: number): void {
@@ -101,11 +121,19 @@ export class AlerterStore {
             attempts = attempts + 1,
             last_error = ?,
             next_retry_at = ?,
-            updated_at = ?
+            updated_at = ?,
+            decision_code = 'delivery_failed',
+            decision_note = ?
         WHERE event_id = ? AND channel = 'telegram'
       `
       )
-      .run(errorMessage.slice(0, 1000), nextRetryAt, now, eventId);
+      .run(
+        errorMessage.slice(0, 1000),
+        nextRetryAt,
+        now,
+        `Delivery failed; retry scheduled in ~${backoffSeconds}s`,
+        eventId
+      );
   }
 
   meetsThreshold(candidate: AlertCandidate, thresholds: AlerterConfig["severityThresholds"]): boolean {
