@@ -17,6 +17,14 @@ Listener writes queued alert jobs to SQLite table:
 
 Alerter service consumes from this table and handles Telegram delivery.
 
+## Database migration
+
+```bash
+pnpm --filter @rwa-monitor/listener db:migrate
+```
+
+Migrations are versioned SQL files in `infra/migrations/sqlite` and tracked via `schema_migrations`.
+
 ## Start (development)
 
 ```bash

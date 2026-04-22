@@ -9,6 +9,7 @@
     "test": "turbo run test --filter=@rwa-monitor/alerter",
     "lint": "echo \"No lint targets yet (scaffold phase).\"",
     "typecheck": "echo \"No typecheck targets yet (scaffold phase).\"",
+    "db:migrate": "pnpm --filter @rwa-monitor/listener db:migrate",
     "security": "echo \"No security targets yet (scaffold phase).\""
   },
   "devDependencies": {

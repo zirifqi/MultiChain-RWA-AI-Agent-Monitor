@@ -13,7 +13,9 @@ Consumes queued alert jobs and sends delivery notifications (Telegram for now).
 
 ## Queue contract
 Input queue table produced by listener:
-- `alert_outbox(event_id, channel, status, attempts, last_error, next_retry_at, created_at, updated_at)`
+- `alert_outbox(event_id, channel, status, attempts, last_error, next_retry_at, created_at, updated_at, decision_code, decision_note)`
+
+Alerter runs shared SQLite migrations automatically on startup.
 
 ## Env
 - `ALERTER_POLL_INTERVAL_MS`

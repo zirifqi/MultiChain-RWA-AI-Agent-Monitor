@@ -3,6 +3,7 @@ import path from "node:path";
 import Database from "better-sqlite3";
 import type { AlertCandidate, AlerterConfig } from "./types";
 import { meetsSeverityThreshold } from "./policy";
+import { migrateDatabase } from "../../../infra/sqlite/migrate";
 
 export class AlerterStore {
   private db: Database.Database;
@@ -11,19 +12,7 @@ export class AlerterStore {
     const dir = path.dirname(filePath);
     fs.mkdirSync(dir, { recursive: true });
     this.db = new Database(filePath);
-    this.ensureSchema();
-  }
-
-  private ensureColumn(table: string, column: string, ddl: string): void {
-    const cols = this.db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>;
-    if (!cols.some((c) => c.name === column)) {
-      this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
-    }
-  }
-
-  private ensureSchema(): void {
-    this.ensureColumn("alert_outbox", "decision_code", "decision_code TEXT");
-    this.ensureColumn("alert_outbox", "decision_note", "decision_note TEXT");
+    migrateDatabase(this.db, { logger: console });
   }
 
   requeueStuckProcessing(processingTimeoutSeconds: number): number {

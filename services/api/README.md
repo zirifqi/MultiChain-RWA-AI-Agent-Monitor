@@ -14,6 +14,10 @@ Read API for canonical RWA monitoring events and risk signals.
 - `GET /summary/risk-trend?window=24h` (supports `h` or `d`, e.g. `12h`, `7d`)
 - `GET /summary/alerts-trend?window=24h` (supports `h` or `d`)
 
+## Database
+
+API runs SQLite migrations automatically on startup via the shared migrator.
+
 ## Start (development)
 
 ```bash

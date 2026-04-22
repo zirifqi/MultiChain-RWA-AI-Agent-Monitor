@@ -266,6 +266,9 @@ MIT License
 # Install all workspaces
 pnpm install
 
+# Run DB migrations (SQLite)
+pnpm db:migrate
+
 # Start listener
 pnpm --filter @rwa-monitor/listener dev
 
