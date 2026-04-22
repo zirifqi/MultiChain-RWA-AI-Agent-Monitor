@@ -26,11 +26,14 @@ Input queue table produced by listener:
 - `ALERT_COOLDOWN_SECONDS`
 - `ALERT_ESCALATION_WINDOW_SECONDS`
 - `ALERT_ESCALATION_REPEAT_COUNT`
+- `ALERT_PROCESSING_TIMEOUT_SECONDS`
 
 ## Alert policy behavior
 - **Threshold gating:** only sends if risk score meets severity threshold
 - **Cooldown dedupe:** suppresses duplicate alerts (same asset+type+severity) within cooldown
 - **Escalation override:** repeated same asset+type alerts within escalation window can bypass suppression and send as escalated
+- **Idempotent claim lock:** each candidate is atomically claimed (`pending|failed -> processing`) to avoid double-send across multi-instances
+- **Stuck processing recovery:** stale `processing` jobs are requeued for retry after timeout
 
 ## Decision codes (audit trail)
 Stored in `alert_outbox.decision_code` + `decision_note`:
@@ -41,6 +44,7 @@ Stored in `alert_outbox.decision_code` + `decision_note`:
 - `sent_threshold_met`
 - `sent_escalated_override`
 - `delivery_failed`
+- `requeued_stale_processing`
 
 ## Start (development)
 

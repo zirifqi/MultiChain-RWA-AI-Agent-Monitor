@@ -26,6 +26,30 @@ export class AlerterStore {
     this.ensureColumn("alert_outbox", "decision_note", "decision_note TEXT");
   }
 
+  requeueStuckProcessing(processingTimeoutSeconds: number): number {
+    const now = new Date();
+    const staleBefore = new Date(now.getTime() - processingTimeoutSeconds * 1000).toISOString();
+    const nowIso = now.toISOString();
+
+    const result = this.db
+      .prepare(
+        `
+        UPDATE alert_outbox
+        SET status = 'failed',
+            next_retry_at = ?,
+            updated_at = ?,
+            decision_code = 'requeued_stale_processing',
+            decision_note = 'Stale processing lock recovered for retry'
+        WHERE channel = 'telegram'
+          AND status = 'processing'
+          AND updated_at <= ?
+      `
+      )
+      .run(nowIso, nowIso, staleBefore);
+
+    return Number(result.changes ?? 0);
+  }
+
   fetchDueTelegramCandidates(limit: number): AlertCandidate[] {
     const now = new Date().toISOString();
 
@@ -75,20 +99,26 @@ export class AlerterStore {
     }));
   }
 
-  markProcessing(eventId: string): void {
+  claimForProcessing(eventId: string): boolean {
     const now = new Date().toISOString();
-    this.db
+
+    const result = this.db
       .prepare(
         `
         UPDATE alert_outbox
         SET status = 'processing',
             updated_at = ?,
             decision_code = 'dispatching',
-            decision_note = 'Alerter is dispatching delivery attempt'
-        WHERE event_id = ? AND channel = 'telegram'
+            decision_note = 'Alerter claimed message for delivery attempt'
+        WHERE event_id = ?
+          AND channel = 'telegram'
+          AND status IN ('pending', 'failed')
+          AND next_retry_at <= ?
       `
       )
-      .run(now, eventId);
+      .run(now, eventId, now);
+
+    return Number(result.changes ?? 0) > 0;
   }
 
   markSent(eventId: string, decisionCode = "sent", decisionNote = "Delivered successfully"): void {

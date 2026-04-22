@@ -16,7 +16,8 @@ const envSchema = z.object({
 
   ALERT_COOLDOWN_SECONDS: z.coerce.number().int().min(0).default(900),
   ALERT_ESCALATION_WINDOW_SECONDS: z.coerce.number().int().min(60).default(1800),
-  ALERT_ESCALATION_REPEAT_COUNT: z.coerce.number().int().min(2).default(3)
+  ALERT_ESCALATION_REPEAT_COUNT: z.coerce.number().int().min(2).default(3),
+  ALERT_PROCESSING_TIMEOUT_SECONDS: z.coerce.number().int().min(30).default(120)
 });
 
 export function loadConfig(): AlerterConfig {
@@ -42,7 +43,8 @@ export function loadConfig(): AlerterConfig {
     policy: {
       cooldownSeconds: env.ALERT_COOLDOWN_SECONDS,
       escalationWindowSeconds: env.ALERT_ESCALATION_WINDOW_SECONDS,
-      escalationRepeatCount: env.ALERT_ESCALATION_REPEAT_COUNT
+      escalationRepeatCount: env.ALERT_ESCALATION_REPEAT_COUNT,
+      processingTimeoutSeconds: env.ALERT_PROCESSING_TIMEOUT_SECONDS
     }
   };
 }

@@ -11,6 +11,11 @@ async function tick(): Promise<void> {
     return;
   }
 
+  const recovered = store.requeueStuckProcessing(config.policy.processingTimeoutSeconds);
+  if (recovered > 0) {
+    console.log(`[alerter] recovered ${recovered} stale processing jobs`);
+  }
+
   const candidates = store.fetchDueTelegramCandidates(50);
 
   for (const candidate of candidates) {
@@ -29,7 +34,10 @@ async function tick(): Promise<void> {
       continue;
     }
 
-    store.markProcessing(candidate.eventId);
+    const claimed = store.claimForProcessing(candidate.eventId);
+    if (!claimed) {
+      continue;
+    }
 
     try {
       if (escalated) {

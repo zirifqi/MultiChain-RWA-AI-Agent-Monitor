@@ -13,6 +13,7 @@ export interface AlerterConfig {
     cooldownSeconds: number;
     escalationWindowSeconds: number;
     escalationRepeatCount: number;
+    processingTimeoutSeconds: number;
   };
 }
 
