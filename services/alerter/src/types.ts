@@ -9,6 +9,11 @@ export interface AlerterConfig {
     chatId?: string;
   };
   severityThresholds: Record<Severity, number>;
+  policy: {
+    cooldownSeconds: number;
+    escalationWindowSeconds: number;
+    escalationRepeatCount: number;
+  };
 }
 
 export interface AlertCandidate {

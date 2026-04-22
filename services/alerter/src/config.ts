@@ -12,7 +12,11 @@ const envSchema = z.object({
 
   ALERT_INFO_MIN_SCORE: z.coerce.number().min(0).max(100).default(95),
   ALERT_WARNING_MIN_SCORE: z.coerce.number().min(0).max(100).default(60),
-  ALERT_CRITICAL_MIN_SCORE: z.coerce.number().min(0).max(100).default(75)
+  ALERT_CRITICAL_MIN_SCORE: z.coerce.number().min(0).max(100).default(75),
+
+  ALERT_COOLDOWN_SECONDS: z.coerce.number().int().min(0).default(900),
+  ALERT_ESCALATION_WINDOW_SECONDS: z.coerce.number().int().min(60).default(1800),
+  ALERT_ESCALATION_REPEAT_COUNT: z.coerce.number().int().min(2).default(3)
 });
 
 export function loadConfig(): AlerterConfig {
@@ -34,6 +38,11 @@ export function loadConfig(): AlerterConfig {
       info: env.ALERT_INFO_MIN_SCORE,
       warning: env.ALERT_WARNING_MIN_SCORE,
       critical: env.ALERT_CRITICAL_MIN_SCORE
+    },
+    policy: {
+      cooldownSeconds: env.ALERT_COOLDOWN_SECONDS,
+      escalationWindowSeconds: env.ALERT_ESCALATION_WINDOW_SECONDS,
+      escalationRepeatCount: env.ALERT_ESCALATION_REPEAT_COUNT
     }
   };
 }

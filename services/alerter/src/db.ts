@@ -110,4 +110,51 @@ export class AlerterStore {
   meetsThreshold(candidate: AlertCandidate, thresholds: AlerterConfig["severityThresholds"]): boolean {
     return candidate.riskScore >= thresholds[candidate.severity];
   }
+
+  hasRecentSentDuplicate(candidate: AlertCandidate, cooldownSeconds: number): boolean {
+    if (cooldownSeconds <= 0) return false;
+
+    const sinceIso = new Date(Date.now() - cooldownSeconds * 1000).toISOString();
+
+    const row = this.db
+      .prepare(
+        `
+        SELECT 1
+        FROM alert_outbox ao
+        JOIN canonical_events ce ON ce.id = ao.event_id
+        WHERE ao.channel = 'telegram'
+          AND ao.status = 'sent'
+          AND ao.event_id != ?
+          AND ce.asset_id = ?
+          AND ce.event_type = ?
+          AND ce.severity = ?
+          AND ao.updated_at >= ?
+        LIMIT 1
+      `
+      )
+      .get(candidate.eventId, candidate.assetId, candidate.type, candidate.severity, sinceIso);
+
+    return Boolean(row);
+  }
+
+  countRecentSentByAssetType(candidate: AlertCandidate, windowSeconds: number): number {
+    const sinceIso = new Date(Date.now() - windowSeconds * 1000).toISOString();
+
+    const row = this.db
+      .prepare(
+        `
+        SELECT COUNT(1) AS cnt
+        FROM alert_outbox ao
+        JOIN canonical_events ce ON ce.id = ao.event_id
+        WHERE ao.channel = 'telegram'
+          AND ao.status = 'sent'
+          AND ce.asset_id = ?
+          AND ce.event_type = ?
+          AND ao.updated_at >= ?
+      `
+      )
+      .get(candidate.assetId, candidate.type, sinceIso) as any;
+
+    return Number(row?.cnt ?? 0);
+  }
 }
