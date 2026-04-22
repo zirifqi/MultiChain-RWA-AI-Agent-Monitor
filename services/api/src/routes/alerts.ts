@@ -1,22 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import type Database from "better-sqlite3";
+import { alertParamsSchema, alertsQuerySchema } from "./validation";
 
 export async function registerAlertRoutes(app: FastifyInstance, db: Database.Database): Promise<void> {
-  app.get("/alerts/outbox", async (request) => {
-    const query = request.query as {
-      limit?: string;
-      status?: string;
-      channel?: string;
-      chain?: string;
-      type?: string;
-      severity?: string;
-      minAttempts?: string;
-      maxAttempts?: string;
-      decisionCode?: string;
-    };
+  app.get("/alerts/outbox", async (request, reply) => {
+    const parsed = alertsQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      reply.code(400);
+      return { error: "Invalid query", details: parsed.error.flatten() };
+    }
 
-    const limitRaw = Number(query.limit ?? 50);
-    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 200) : 50;
+    const query = parsed.data;
 
     const where: string[] = [];
     const values: unknown[] = [];
@@ -52,19 +46,18 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
     }
 
     if (query.minAttempts !== undefined) {
-      const minAttempts = Number(query.minAttempts);
-      if (Number.isFinite(minAttempts)) {
-        where.push("ao.attempts >= ?");
-        values.push(Math.max(0, Math.floor(minAttempts)));
-      }
+      where.push("ao.attempts >= ?");
+      values.push(query.minAttempts);
     }
 
     if (query.maxAttempts !== undefined) {
-      const maxAttempts = Number(query.maxAttempts);
-      if (Number.isFinite(maxAttempts)) {
-        where.push("ao.attempts <= ?");
-        values.push(Math.max(0, Math.floor(maxAttempts)));
-      }
+      where.push("ao.attempts <= ?");
+      values.push(query.maxAttempts);
+    }
+
+    if (query.cursor) {
+      where.push("ao.updated_at < ?");
+      values.push(query.cursor);
     }
 
     const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
@@ -100,9 +93,9 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
       LIMIT ?
     `);
 
-    const rows = stmt.all(...values, limit);
+    const rows = stmt.all(...values, query.limit) as any[];
 
-    return rows.map((row: any) => ({
+    const items = rows.map((row) => ({
       eventId: row.event_id,
       channel: row.channel,
       status: row.status,
@@ -136,10 +129,24 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
               createdAt: row.signal_created_at
             }
     }));
+
+    return {
+      items,
+      pageInfo: {
+        limit: query.limit,
+        nextCursor: items.length > 0 ? items[items.length - 1].updatedAt : null
+      }
+    };
   });
 
   app.get("/alerts/outbox/:eventId", async (request, reply) => {
-    const params = request.params as { eventId: string };
+    const parsedParams = alertParamsSchema.safeParse(request.params);
+    if (!parsedParams.success) {
+      reply.code(400);
+      return { error: "Invalid params", details: parsedParams.error.flatten() };
+    }
+
+    const { eventId } = parsedParams.data;
 
     const row = db
       .prepare(
@@ -179,11 +186,11 @@ export async function registerAlertRoutes(app: FastifyInstance, db: Database.Dat
         LIMIT 1
       `
       )
-      .get(params.eventId) as any;
+      .get(eventId) as any;
 
     if (!row) {
       reply.code(404);
-      return { error: "Alert outbox entry not found", eventId: params.eventId };
+      return { error: "Alert outbox entry not found", eventId };
     }
 
     return {

@@ -1,19 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import type Database from "better-sqlite3";
+import { signalsQuerySchema } from "./validation";
 
 export async function registerSignalRoutes(app: FastifyInstance, db: Database.Database): Promise<void> {
-  app.get("/signals", async (request) => {
-    const query = request.query as {
-      limit?: string;
-      chain?: string;
-      type?: string;
-      severity?: string;
-      minScore?: string;
-      maxScore?: string;
-    };
+  app.get("/signals", async (request, reply) => {
+    const parsed = signalsQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      reply.code(400);
+      return { error: "Invalid query", details: parsed.error.flatten() };
+    }
 
-    const limitRaw = Number(query.limit ?? 50);
-    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 200) : 50;
+    const query = parsed.data;
 
     const where: string[] = [];
     const values: unknown[] = [];
@@ -34,19 +31,18 @@ export async function registerSignalRoutes(app: FastifyInstance, db: Database.Da
     }
 
     if (query.minScore !== undefined) {
-      const minScore = Number(query.minScore);
-      if (Number.isFinite(minScore)) {
-        where.push("rs.risk_score >= ?");
-        values.push(minScore);
-      }
+      where.push("rs.risk_score >= ?");
+      values.push(query.minScore);
     }
 
     if (query.maxScore !== undefined) {
-      const maxScore = Number(query.maxScore);
-      if (Number.isFinite(maxScore)) {
-        where.push("rs.risk_score <= ?");
-        values.push(maxScore);
-      }
+      where.push("rs.risk_score <= ?");
+      values.push(query.maxScore);
+    }
+
+    if (query.cursor) {
+      where.push("rs.created_at < ?");
+      values.push(query.cursor);
     }
 
     const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
@@ -72,9 +68,9 @@ export async function registerSignalRoutes(app: FastifyInstance, db: Database.Da
       LIMIT ?
     `);
 
-    const rows = stmt.all(...values, limit);
+    const rows = stmt.all(...values, query.limit) as any[];
 
-    return rows.map((row: any) => ({
+    const items = rows.map((row) => ({
       eventId: row.event_id,
       riskScore: Number(row.risk_score),
       confidence: Number(row.confidence),
@@ -90,5 +86,13 @@ export async function registerSignalRoutes(app: FastifyInstance, db: Database.Da
         observedAt: row.observed_at
       }
     }));
+
+    return {
+      items,
+      pageInfo: {
+        limit: query.limit,
+        nextCursor: items.length > 0 ? items[items.length - 1].createdAt : null
+      }
+    };
   });
 }

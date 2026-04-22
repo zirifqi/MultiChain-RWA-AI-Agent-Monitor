@@ -1,11 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import type Database from "better-sqlite3";
+import { eventParamsSchema, eventsQuerySchema } from "./validation";
 
 export async function registerEventRoutes(app: FastifyInstance, db: Database.Database): Promise<void> {
-  app.get("/events", async (request) => {
-    const query = request.query as { limit?: string; chain?: string; type?: string };
-    const limitRaw = Number(query.limit ?? 50);
-    const limit = Number.isFinite(limitRaw) ? Math.min(Math.max(limitRaw, 1), 200) : 50;
+  app.get("/events", async (request, reply) => {
+    const parsed = eventsQuerySchema.safeParse(request.query);
+    if (!parsed.success) {
+      reply.code(400);
+      return { error: "Invalid query", details: parsed.error.flatten() };
+    }
+
+    const query = parsed.data;
 
     const where: string[] = [];
     const values: unknown[] = [];
@@ -20,6 +25,11 @@ export async function registerEventRoutes(app: FastifyInstance, db: Database.Dat
       values.push(query.type);
     }
 
+    if (query.cursor) {
+      where.push("observed_at < ?");
+      values.push(query.cursor);
+    }
+
     const whereSql = where.length > 0 ? `WHERE ${where.join(" AND ")}` : "";
 
     const stmt = db.prepare(`
@@ -30,9 +40,9 @@ export async function registerEventRoutes(app: FastifyInstance, db: Database.Dat
       LIMIT ?
     `);
 
-    const rows = stmt.all(...values, limit);
+    const rows = stmt.all(...values, query.limit) as any[];
 
-    return rows.map((row: any) => ({
+    const items = rows.map((row) => ({
       id: row.id,
       chain: row.chain,
       contractAddress: row.contract_address,
@@ -45,10 +55,24 @@ export async function registerEventRoutes(app: FastifyInstance, db: Database.Dat
       severity: row.severity,
       observedAt: row.observed_at
     }));
+
+    return {
+      items,
+      pageInfo: {
+        limit: query.limit,
+        nextCursor: items.length > 0 ? items[items.length - 1].observedAt : null
+      }
+    };
   });
 
   app.get("/events/:id", async (request, reply) => {
-    const params = request.params as { id: string };
+    const parsedParams = eventParamsSchema.safeParse(request.params);
+    if (!parsedParams.success) {
+      reply.code(400);
+      return { error: "Invalid params", details: parsedParams.error.flatten() };
+    }
+
+    const { id } = parsedParams.data;
 
     const stmt = db.prepare(`
       SELECT
@@ -74,11 +98,11 @@ export async function registerEventRoutes(app: FastifyInstance, db: Database.Dat
       LIMIT 1
     `);
 
-    const row = stmt.get(params.id) as any;
+    const row = stmt.get(id) as any;
 
     if (!row) {
       reply.code(404);
-      return { error: "Event not found", id: params.id };
+      return { error: "Event not found", id };
     }
 
     return {
