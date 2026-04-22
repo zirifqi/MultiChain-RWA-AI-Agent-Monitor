@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "tsx src/index.ts",
-    "start": "node --enable-source-maps dist/index.js"
+    "start": "node --enable-source-maps dist/index.js",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
     "@rwa-monitor/shared-types": "workspace:*",

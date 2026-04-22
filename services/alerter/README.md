@@ -38,6 +38,12 @@ Input queue table produced by listener:
 pnpm --filter @rwa-monitor/alerter dev
 ```
 
+## Run tests
+
+```bash
+pnpm --filter @rwa-monitor/alerter test
+```
+
 ## Policy tests (manual baseline)
 
 Test files:

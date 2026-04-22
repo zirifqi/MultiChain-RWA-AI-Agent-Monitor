@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
-    "test": "echo \"No test targets yet (scaffold phase).\"",
+    "test": "turbo run test --filter=@rwa-monitor/alerter",
     "lint": "echo \"No lint targets yet (scaffold phase).\"",
     "typecheck": "echo \"No typecheck targets yet (scaffold phase).\"",
     "security": "echo \"No security targets yet (scaffold phase).\""
