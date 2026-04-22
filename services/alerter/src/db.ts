@@ -1,18 +1,13 @@
-import fs from "node:fs";
-import path from "node:path";
-import Database from "better-sqlite3";
+import type Database from "better-sqlite3";
 import type { AlertCandidate, AlerterConfig } from "./types";
 import { meetsSeverityThreshold } from "./policy";
-import { migrateDatabase } from "../../../infra/sqlite/migrate";
+import { openSqlite } from "../../../infra/sqlite/open";
 
 export class AlerterStore {
   private db: Database.Database;
 
   constructor(filePath: string) {
-    const dir = path.dirname(filePath);
-    fs.mkdirSync(dir, { recursive: true });
-    this.db = new Database(filePath);
-    migrateDatabase(this.db, { logger: console });
+    this.db = openSqlite(filePath);
   }
 
   requeueStuckProcessing(processingTimeoutSeconds: number): number {

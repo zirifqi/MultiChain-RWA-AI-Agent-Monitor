@@ -1,15 +1,10 @@
 import "dotenv/config";
-import fs from "node:fs";
-import path from "node:path";
-import Database from "better-sqlite3";
 import { getMigrationStatus, migrateDatabase } from "../../../../infra/sqlite/migrate";
+import { openSqlite } from "../../../../infra/sqlite/open";
 
-function openDb(): { db: Database.Database; sqlitePath: string } {
+function openDb() {
   const sqlitePath = process.env.SQLITE_PATH ?? "./data/rwa-monitor.db";
-  const dir = path.dirname(sqlitePath);
-  fs.mkdirSync(dir, { recursive: true });
-
-  const db = new Database(sqlitePath);
+  const db = openSqlite(sqlitePath, { migrate: false });
   return { db, sqlitePath };
 }
 
