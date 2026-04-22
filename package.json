@@ -10,6 +10,7 @@
     "lint": "echo \"No lint targets yet (scaffold phase).\"",
     "typecheck": "echo \"No typecheck targets yet (scaffold phase).\"",
     "db:migrate": "pnpm --filter @rwa-monitor/listener db:migrate",
+    "db:migrate:status": "pnpm --filter @rwa-monitor/listener db:migrate:status",
     "security": "echo \"No security targets yet (scaffold phase).\""
   },
   "devDependencies": {

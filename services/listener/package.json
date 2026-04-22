@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "tsx src/index.ts",
     "start": "node --enable-source-maps dist/index.js",
-    "db:migrate": "tsx src/db/migrate.ts"
+    "db:migrate": "tsx src/db/migrate.ts up",
+    "db:migrate:status": "tsx src/db/migrate.ts status"
   },
   "dependencies": {
     "@rwa-monitor/ai-engine": "workspace:*",

@@ -21,6 +21,7 @@ Alerter service consumes from this table and handles Telegram delivery.
 
 ```bash
 pnpm --filter @rwa-monitor/listener db:migrate
+pnpm --filter @rwa-monitor/listener db:migrate:status
 ```
 
 Migrations are versioned SQL files in `infra/migrations/sqlite` and tracked via `schema_migrations`.

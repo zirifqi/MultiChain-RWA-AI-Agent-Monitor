@@ -269,6 +269,9 @@ pnpm install
 # Run DB migrations (SQLite)
 pnpm db:migrate
 
+# Check migration status
+pnpm db:migrate:status
+
 # Start listener
 pnpm --filter @rwa-monitor/listener dev
 
