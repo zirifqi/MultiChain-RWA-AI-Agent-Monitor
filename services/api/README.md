@@ -14,6 +14,8 @@ Read API for canonical RWA monitoring events and risk signals.
 - `GET /summary/risk-trend?window=24h` (supports `h` or `d`, e.g. `12h`, `7d`)
 - `GET /summary/alerts-trend?window=24h` (supports `h` or `d`)
 - `GET /metrics?windowHours=24&format=json|prom`
+- `POST /ops/alerts/requeue-failed` body: `{ "dryRun": true, "limit": 500 }`
+- `POST /ops/alerts/recover-stale` body: `{ "dryRun": true, "processingTimeoutSeconds": 120, "limit": 500 }`
 
 ## Validation & pagination
 
