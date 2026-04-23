@@ -13,6 +13,7 @@ Read API for canonical RWA monitoring events and risk signals.
 - `GET /summary/alerts-health`
 - `GET /summary/risk-trend?window=24h` (supports `h` or `d`, e.g. `12h`, `7d`)
 - `GET /summary/alerts-trend?window=24h` (supports `h` or `d`)
+- `GET /metrics?windowHours=24&format=json|prom`
 
 ## Validation & pagination
 

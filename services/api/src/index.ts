@@ -6,6 +6,7 @@ import { registerEventRoutes } from "./routes/events";
 import { registerSignalRoutes } from "./routes/signals";
 import { registerAlertRoutes } from "./routes/alerts";
 import { registerSummaryRoutes } from "./routes/summary";
+import { registerMetricsRoutes } from "./routes/metrics";
 
 async function main(): Promise<void> {
   const app = Fastify({ logger: true });
@@ -21,6 +22,7 @@ async function main(): Promise<void> {
   await registerSignalRoutes(app, db);
   await registerAlertRoutes(app, db);
   await registerSummaryRoutes(app, db);
+  await registerMetricsRoutes(app, db);
 
   await app.listen({ port, host });
   app.log.info(`API listening on http://${host}:${port}`);
