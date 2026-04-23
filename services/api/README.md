@@ -16,6 +16,8 @@ Read API for canonical RWA monitoring events and risk signals.
 - `GET /metrics?windowHours=24&format=json|prom`
 - `POST /ops/alerts/requeue-failed` body: `{ "dryRun": true, "limit": 500 }`
 - `POST /ops/alerts/recover-stale` body: `{ "dryRun": true, "processingTimeoutSeconds": 120, "limit": 500 }`
+  - Ops endpoints support auth token via `x-ops-token: <OPS_API_TOKEN>` or `Authorization: Bearer <OPS_API_TOKEN>`.
+  - If `OPS_API_TOKEN` is empty, ops endpoints stay open (dev mode).
 
 ## Validation & pagination
 

@@ -2,6 +2,22 @@ import type { FastifyInstance } from "fastify";
 import type Database from "better-sqlite3";
 import { z } from "zod";
 
+function isAuthorizedOpsRequest(headers: Record<string, unknown>): boolean {
+  const configuredToken = process.env.OPS_API_TOKEN;
+  if (!configuredToken) return true;
+
+  const headerToken = String(headers["x-ops-token"] ?? "");
+  if (headerToken && headerToken === configuredToken) return true;
+
+  const authHeader = String(headers.authorization ?? "");
+  if (authHeader.startsWith("Bearer ")) {
+    const bearerToken = authHeader.slice(7);
+    if (bearerToken === configuredToken) return true;
+  }
+
+  return false;
+}
+
 const requeueFailedSchema = z.object({
   dryRun: z.coerce.boolean().default(false),
   limit: z.coerce.number().int().min(1).max(5000).default(500)
@@ -15,6 +31,11 @@ const recoverStaleSchema = z.object({
 
 export async function registerOpsRoutes(app: FastifyInstance, db: Database.Database): Promise<void> {
   app.post("/ops/alerts/requeue-failed", async (request, reply) => {
+    if (!isAuthorizedOpsRequest(request.headers as Record<string, unknown>)) {
+      reply.code(401);
+      return { error: "Unauthorized ops request" };
+    }
+
     const parsed = requeueFailedSchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       reply.code(400);
@@ -83,6 +104,11 @@ export async function registerOpsRoutes(app: FastifyInstance, db: Database.Datab
   });
 
   app.post("/ops/alerts/recover-stale", async (request, reply) => {
+    if (!isAuthorizedOpsRequest(request.headers as Record<string, unknown>)) {
+      reply.code(401);
+      return { error: "Unauthorized ops request" };
+    }
+
     const parsed = recoverStaleSchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       reply.code(400);
